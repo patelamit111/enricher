@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enricher</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Enricher</h1>
+      <p class="tagline">Upload a CSV, explore GPT‑5 enrichment ideas, and generate enriched data.</p>
+    </header>
+
+    <section class="panel">
+      <form id="analyze-form" enctype="multipart/form-data">
+        <div class="field">
+          <label for="file">CSV file</label>
+          <input type="file" id="file" name="file" accept=".csv" required>
+        </div>
+
+        <div class="field">
+          <label for="model">GPT‑5 model</label>
+          <select id="model" name="model">
+            {% for model in models %}
+            <option value="{{ model.id }}" {% if model.id == default_model %}selected{% endif %}>{{ model.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button type="submit">Analyze dataset</button>
+      </form>
+
+      <div id="analysis-output" class="output hidden">
+        <h2>Enrichment ideas</h2>
+        <pre id="analysis-text"></pre>
+        <div class="metadata" id="metadata"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Enrichment instructions</h2>
+      <p class="helper">Refine the suggestions above or paste your own enrichment prompt, then run GPT‑5 to produce an enriched CSV.</p>
+      <form id="enrich-form" enctype="multipart/form-data">
+        <textarea id="instructions" name="instructions" rows="6" placeholder="Describe how GPT‑5 should enrich the dataset"></textarea>
+        <input type="hidden" id="enrich-model" name="model" value="{{ default_model }}">
+        <button type="submit" disabled>Generate enriched CSV</button>
+      </form>
+      <div id="enrich-output" class="output hidden">
+        <h3>Download enriched data</h3>
+        <a id="download-link" class="button" href="#" download>Download CSV</a>
+      </div>
+    </section>
+
+    <section class="panel info">
+      <h2>How it works</h2>
+      <ol>
+        <li>Upload a CSV and select a GPT‑5 model served through Replicate.</li>
+        <li>Review the enrichment ideas GPT‑5 proposes.</li>
+        <li>Fine-tune the instructions and generate an enriched CSV for download.</li>
+      </ol>
+    </section>
+  </main>
+
+  <script>
+    const analyzeForm = document.getElementById('analyze-form');
+    const enrichForm = document.getElementById('enrich-form');
+    const fileInput = document.getElementById('file');
+    const modelSelect = document.getElementById('model');
+    const enrichModelInput = document.getElementById('enrich-model');
+    const analysisOutput = document.getElementById('analysis-output');
+    const analysisText = document.getElementById('analysis-text');
+    const metadataEl = document.getElementById('metadata');
+    const instructionsInput = document.getElementById('instructions');
+    const enrichButton = enrichForm.querySelector('button');
+    const enrichOutput = document.getElementById('enrich-output');
+    const downloadLink = document.getElementById('download-link');
+
+    let currentFile = null;
+
+    const resetEnrichmentState = () => {
+      enrichButton.disabled = true;
+      enrichOutput.classList.add('hidden');
+      downloadLink.href = '#';
+      downloadLink.removeAttribute('download');
+    };
+
+    modelSelect.addEventListener('change', () => {
+      enrichModelInput.value = modelSelect.value;
+    });
+
+    fileInput.addEventListener('change', () => {
+      currentFile = fileInput.files[0] || null;
+      resetEnrichmentState();
+      analysisOutput.classList.add('hidden');
+      analysisText.textContent = '';
+      metadataEl.textContent = '';
+    });
+
+    instructionsInput.addEventListener('input', () => {
+      const hasInstructions = instructionsInput.value.trim().length > 0;
+      enrichButton.disabled = !hasInstructions || !currentFile;
+    });
+
+    analyzeForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!fileInput.files.length) {
+        alert('Please choose a CSV file first.');
+        return;
+      }
+
+      const formData = new FormData();
+      currentFile = fileInput.files[0];
+      formData.append('file', currentFile);
+      formData.append('model', modelSelect.value);
+
+      analysisOutput.classList.add('hidden');
+      analysisText.textContent = 'Analyzing with GPT‑5…';
+      metadataEl.textContent = '';
+
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to analyze the CSV.');
+        }
+
+        const data = await response.json();
+        analysisText.textContent = data.analysis;
+        metadataEl.textContent = `Columns: ${data.metadata.columns.length} | Sampled rows: ${data.metadata.rows_sampled} | Estimated total rows: ${data.metadata.rows_total_estimate}`;
+        analysisOutput.classList.remove('hidden');
+        instructionsInput.value = data.analysis;
+        enrichButton.disabled = !instructionsInput.value.trim() || !currentFile;
+      } catch (error) {
+        analysisText.textContent = '';
+        alert(error.message);
+      }
+    });
+
+    enrichForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!currentFile) {
+        alert('Upload and analyze a CSV first.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', currentFile);
+      formData.append('model', modelSelect.value);
+      formData.append('instructions', instructionsInput.value.trim());
+
+      enrichButton.disabled = true;
+      enrichButton.textContent = 'Enriching…';
+
+      try {
+        const response = await fetch('/api/enrich', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to enrich the CSV.');
+        }
+
+        const data = await response.json();
+        const blob = new Blob([data.enriched_csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const filename = `enriched-${Date.now()}.csv`;
+        downloadLink.href = url;
+        downloadLink.download = filename;
+        enrichOutput.classList.remove('hidden');
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        enrichButton.disabled = false;
+        enrichButton.textContent = 'Generate enriched CSV';
+      }
+    });
+  </script>
+</body>
+</html>
