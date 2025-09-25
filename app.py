@@ -18,8 +18,9 @@ app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("MAX_UPLOAD_MB", "15")) * 1024 
 DEBUG_MODE = os.getenv("FLASK_DEBUG", "0") == "1"
 
 AVAILABLE_MODELS: List[Dict[str, str]] = [
-    {"id": "openai/gpt-5.0-mini", "label": "GPT‑5 Mini"},
-    {"id": "openai/gpt-5.0-large", "label": "GPT‑5 Large"},
+    {"id": "openai/gpt-5.0-mini", "label": "GPT‑5.0 Mini"},
+    {"id": "openai/gpt-5.0", "label": "GPT‑5.0"},
+    {"id": "openai/gpt-5.0-pro", "label": "GPT‑5.0 Pro"},
 ]
 DEFAULT_MODEL = os.getenv("REPLICATE_DEFAULT_MODEL", AVAILABLE_MODELS[0]["id"])
 _client: "replicate.Client | None" = None

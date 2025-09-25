@@ -28,7 +28,7 @@ The app will be available at http://localhost:5200.
 | Name | Description |
 | ---- | ----------- |
 | `REPLICATE_API_TOKEN` | **Required.** Your Replicate API token. |
-| `REPLICATE_DEFAULT_MODEL` | Optional. Default GPT‑5 model id (must be from the dropdown options). |
+| `REPLICATE_DEFAULT_MODEL` | Optional. Default GPT‑5 model id (must match one of `openai/gpt-5.0-mini`, `openai/gpt-5.0`, or `openai/gpt-5.0-pro`). |
 | `MAX_UPLOAD_MB` | Optional. Maximum upload size in MB (default `15`). |
 
 ## Notes
