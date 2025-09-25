@@ -8,8 +8,10 @@ from flask import Flask, jsonify, render_template, request
 
 try:
     import replicate
+    from replicate.exceptions import ReplicateError
 except ImportError:  # pragma: no cover - handled at runtime
     replicate = None  # type: ignore
+    ReplicateError = RuntimeError  # type: ignore[assignment]
 
 load_dotenv()
 
@@ -105,6 +107,25 @@ def build_enrichment_prompt(original_csv: str, instructions: str) -> str:
     )
 
 
+def _format_replicate_error(err: "ReplicateError", model: str) -> str:
+    status = getattr(err, "status", None)
+    detail = getattr(err, "detail", None)
+
+    if status == 404:
+        return (
+            "The selected model was not found on Replicate or your API token lacks access. "
+            f"Update your model list or choose a different option. (model id: {model})"
+        )
+
+    if status == 401:
+        return "Replicate rejected the request. Check that your API token is valid."
+
+    if detail:
+        return str(detail)
+
+    return str(err)
+
+
 def run_model(prompt: str, model: str, temperature: float = 0.2, max_output_tokens: int = 1200) -> str:
     client = get_replicate_client()
     payload: Dict[str, Any] = {
@@ -116,7 +137,11 @@ def run_model(prompt: str, model: str, temperature: float = 0.2, max_output_toke
         "max_output_tokens": max_output_tokens,
     }
 
-    output = client.run(model, input=payload)
+    try:
+        output = client.run(model, input=payload)
+    except ReplicateError as err:  # pragma: no cover - depends on API response
+        message = _format_replicate_error(err, model)
+        raise RuntimeError(message) from err
 
     if isinstance(output, list):
         text_output = "".join(segment for segment in output if isinstance(segment, str))
