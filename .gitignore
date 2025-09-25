@@ -4,3 +4,5 @@ instance/
 *.pyc
 .DS_Store
 .env
+
+server.log
