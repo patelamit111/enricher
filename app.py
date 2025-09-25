@@ -20,25 +20,13 @@ app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("MAX_UPLOAD_MB", "15")) * 1024 
 DEBUG_MODE = os.getenv("FLASK_DEBUG", "0") == "1"
 
 AVAILABLE_MODELS: List[Dict[str, str]] = [
-    {"id": "openai/o1", "label": "o1"},
-    {"id": "openai/o1-mini", "label": "o1 Mini"},
-    {"id": "openai/o4-mini", "label": "o4 Mini"},
+    {"id": "openai/gpt-5.0-mini", "label": "GPT‑5.0 Mini"},
+    {"id": "openai/gpt-5.0", "label": "GPT‑5.0"},
+    {"id": "openai/gpt-5.0-pro", "label": "GPT‑5.0 Pro"},
     {"id": "openai/gpt-5", "label": "GPT‑5"},
     {"id": "openai/gpt-5-mini", "label": "GPT‑5 Mini"},
     {"id": "openai/gpt-5-nano", "label": "GPT‑5 Nano"},
     {"id": "openai/gpt-5-structured", "label": "GPT‑5 Structured"},
-    {"id": "openai/gpt-4o", "label": "GPT‑4o"},
-    {"id": "openai/gpt-4o-mini", "label": "GPT‑4o Mini"},
-    {"id": "openai/gpt-4o-transcribe", "label": "GPT‑4o Transcribe"},
-    {"id": "openai/gpt-4o-mini-transcribe", "label": "GPT‑4o Mini Transcribe"},
-    {"id": "openai/gpt-4", "label": "GPT‑4"},
-    {"id": "openai/gpt-image-1", "label": "GPT-Image-1"},
-    {"id": "openai/dall-e-3", "label": "DALL·E 3"},
-    {"id": "openai/dall-e-2", "label": "DALL·E 2"},
-    {"id": "openai/gpt-oss-120b", "label": "GPT-OSS 120B"},
-    {"id": "openai/gpt-oss-20b", "label": "GPT-OSS 20B"},
-    {"id": "openai/clip", "label": "CLIP"},
-    {"id": "openai/whisper", "label": "Whisper"},
 ]
 DEFAULT_MODEL = os.getenv("REPLICATE_DEFAULT_MODEL", AVAILABLE_MODELS[0]["id"])
 _client: "replicate.Client | None" = None
